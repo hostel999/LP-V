@@ -1,77 +1,110 @@
-#include <iostream>
-#include <omp.h>   // used only for timing (omp_get_wtime)
-
+#include<iostream>
+#include<stdlib.h>
+#include<omp.h>
 using namespace std;
 
-// Sequential Bubble Sort
-void sequential_bubble(int arr[], int n)
+void mergesort(int a[], int i, int j);
+void merge(int a[], int i1, int j1, int i2, int j2);
+
+void mergesort(int a[], int i, int j)
 {
-    for (int i = 0; i < n - 1; i++)
+    int mid;
+    if(i < j)
     {
-        for (int j = 0; j < n - i - 1; j++)
+        mid = (i + j) / 2;
+
+        #pragma omp parallel sections
         {
-            if (arr[j] > arr[j + 1])
-            {
-                // swap
-                int temp = arr[j];
-                arr[j] = arr[j + 1];
-                arr[j + 1] = temp;
-            }
+            #pragma omp section
+            mergesort(a, i, mid);
+
+            #pragma omp section
+            mergesort(a, mid + 1, j);
         }
+
+        merge(a, i, mid, mid + 1, j);
     }
+}
+
+void merge(int a[], int i1, int j1, int i2, int j2)
+{
+    int temp[1000];
+    int i = i1, j = i2, k = 0;
+
+    while(i <= j1 && j <= j2)
+    {
+        if(a[i] < a[j])
+            temp[k++] = a[i++];
+        else
+            temp[k++] = a[j++];
+    }
+
+    while(i <= j1)
+        temp[k++] = a[i++];
+
+    while(j <= j2)
+        temp[k++] = a[j++];
+
+    for(i = i1, j = 0; i <= j2; i++, j++)
+        a[i] = temp[j];
 }
 
 int main()
 {
-    int n;
+    int *a, n, i;
+    double start, stop;
+
     cout << "Enter total number of elements: ";
     cin >> n;
 
-    int *arr = new int[n];
+    a = new int[n];
 
-    cout << "Enter elements:\n";
-    for (int i = 0; i < n; i++)
-        cin >> arr[i];
+    cout << "Enter elements: ";
+    for(i = 0; i < n; i++)
+        cin >> a[i];
 
-    // start time
-    double start = omp_get_wtime();
+    start = omp_get_wtime();
 
-    sequential_bubble(arr, n);
+    mergesort(a, 0, n - 1);
 
-    // end time
-    double end = omp_get_wtime();
+    stop = omp_get_wtime();
 
-    cout << "\nSorted array:\n";
-    for (int i = 0; i < n; i++)
-        cout << arr[i] << " ";
+    cout << "Sorted array is:\n";
+    for(i = 0; i < n; i++)
+        cout << a[i] << " ";
 
-    cout << "\nExecution Time (Sequential): " << end - start << " seconds\n";
+    cout << "\nExecution Time: " << (stop - start);
 
-    delete[] arr;
     return 0;
 }
-
 /*
-================ HOW TO RUN =================
+STEPS TO RUN ON UBUNTU:
+optional
+1. Install compiler:
+   sudo apt update
+   sudo apt install g++
 
-1. Save file as:
-   bubble.cpp
+2. Save file:
+   mergesort.cpp
 
-2. Compile (IMPORTANT: include OpenMP for timing):
-   g++ -fopenmp bubble.cpp -o bubble
+3. Compile with OpenMP:
+   g++ -fopenmp mergesort.cpp -o mergesort
 
-3. Run:
-   Windows:
-       ./bubble
+4. Run program:
+   ./mergesort
 
-4. Sample Input:
-   Enter total number of elements: 5
-   Enter elements:
-   5 3 1 4 2
+5. (Optional) Set threads:
+   export OMP_NUM_THREADS=4
+   ./mergesort
+   
+👉 Example run:
 
-5. Output:
-   Sorted array:
-   1 2 3 4 5
+Enter total number of elements: 5
+Enter elements: 5 2 9 1 6
 
-============================================
+👉 Output:
+
+Sorted array is:
+1 2 5 6 9
+Execution Time: 0.000123
 */
